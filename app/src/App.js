@@ -2,11 +2,16 @@ import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import deploy from './deploy';
 import Escrow from './Escrow';
+import axios from "axios";
+import ContractHistory from './contractHistory';
+const server = axios.create({
+  baseURL: "http://localhost:3042",
+});
 
 const provider = new ethers.providers.Web3Provider(window.ethereum);
 
 export async function approve(escrowContract, signer) {
-  const approveTxn = await escrowContract.connect(signer).approve();
+  const approveTxn = await escrowContract.connect(signer).approve({ gasLimit: 200000 });
   await approveTxn.wait();
 }
 
@@ -20,24 +25,38 @@ function App() {
       const accounts = await provider.send('eth_requestAccounts', []);
 
       setAccount(accounts[0]);
-      setSigner(provider.getSigner());
+      setSigner(await provider.getSigner());
     }
 
     getAccounts();
   }, [account]);
 
+  // async function fetchContractApprovalStatus(escrowContract) {
+  //   const isApproved = await escrowContract.isApproved();
+  //   return isApproved;
+  // }
+
   async function newContract() {
     const beneficiary = document.getElementById('beneficiary').value;
     const arbiter = document.getElementById('arbiter').value;
-    const value = ethers.BigNumber.from(document.getElementById('wei').value);
-    const escrowContract = await deploy(signer, arbiter, beneficiary, value);
-
-
-    const escrow = {
-      address: escrowContract.address,
+    const value = document.getElementById('wei').value;
+    const parseValue = ethers.utils.parseEther(value);
+    const escrowContract = await deploy(signer, arbiter, beneficiary, parseValue);
+    const address = escrowContract.address;
+    // const isApproved = await fetchContractApprovalStatus(escrowContract);
+      await server.post("/contracts", {
+        address,
+        arbiter,
+         beneficiary,
+         value,
+      });
+      
+  const escrow = {
+      address,
       arbiter,
       beneficiary,
       value: value.toString(),
+      // isApproved,
       handleApprove: async () => {
         escrowContract.on('Approved', () => {
           document.getElementById(escrowContract.address).className =
@@ -45,12 +64,13 @@ function App() {
           document.getElementById(escrowContract.address).innerText =
             "✓ It's been approved!";
         });
-
+        
         await approve(escrowContract, signer);
       },
     };
 
     setEscrows([...escrows, escrow]);
+
   }
 
   return (
@@ -93,6 +113,7 @@ function App() {
             return <Escrow key={escrow.address} {...escrow} />;
           })}
         </div>
+        <div><ContractHistory/></div>
       </div>
     </>
   );

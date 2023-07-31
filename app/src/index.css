@@ -5,6 +5,9 @@ body {
 }
 
 .contract, .existing-contracts {
+  
+    max-height: 400px; 
+    overflow-y: auto; 
   margin: 20px;
   display: inline-block;
   padding: 40px;

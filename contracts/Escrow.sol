@@ -9,11 +9,15 @@ contract Escrow {
 	bool public isApproved;
 
 	constructor(address _arbiter, address _beneficiary) payable {
+		require ( msg.sender != _beneficiary, "address not approved");
+        require (msg.sender != _arbiter, "address not approved");
+        require (_beneficiary != _arbiter, "address not approved");
 		arbiter = _arbiter;
 		beneficiary = _beneficiary;
 		depositor = msg.sender;
 	}
-
+	fallback() external payable{
+	}
 	event Approved(uint);
 
 	function approve() external {
